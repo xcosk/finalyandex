@@ -16,6 +16,6 @@ COPY web /app/web
 ENV TODO_PORT=7540
 ENV TODO_DBFILE=/data/scheduler.db
 
-EXPOSE 7540
+EXPOSE ${TODO_PORT}
 
 CMD ["/app/finalyandex"]

@@ -2,7 +2,9 @@ package api
 
 import "net/http"
 
-func Init() {
+func Init(password string) {
+	authPassword = password
+
 	http.HandleFunc("/api/nextdate", nextDateHandler)
 	http.HandleFunc("/api/signin", signinHandler)
 	http.HandleFunc("/api/task", auth(taskHandler))

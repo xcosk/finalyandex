@@ -36,15 +36,13 @@ func Tasks(limit int) ([]*Task, error) {
 
 	tasks := make([]*Task, 0)
 	for rows.Next() {
-		var (
-			t  Task
-			id int64
-		)
+		t := &Task{}
+		var id int64
 		if err := rows.Scan(&id, &t.Date, &t.Title, &t.Comment, &t.Repeat); err != nil {
 			return nil, err
 		}
 		t.ID = strconv.FormatInt(id, 10)
-		tasks = append(tasks, &t)
+		tasks = append(tasks, t)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err

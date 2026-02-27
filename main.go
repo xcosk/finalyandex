@@ -13,13 +13,14 @@ func main() {
 	if dbFile == "" {
 		dbFile = "scheduler.db"
 	}
+	password := os.Getenv("TODO_PASSWORD")
 
 	if err := db.Init(dbFile); err != nil {
 		log.Fatal(err)
 	}
 	defer db.Close()
 
-	if err := server.Run(); err != nil {
+	if err := server.Run(password); err != nil {
 		log.Fatal(err)
 	}
 }

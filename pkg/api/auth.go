@@ -6,9 +6,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"net/http"
-	"os"
 	"strings"
 	"time"
 )
@@ -21,6 +19,8 @@ type jwtPayload struct {
 	PH  string `json:"ph"`
 	Exp int64  `json:"exp"`
 }
+
+var authPassword string
 
 func passwordHash(password string) string {
 	sum := sha256.Sum256([]byte(password))
@@ -96,10 +96,9 @@ func verifyToken(token, password string) bool {
 
 func auth(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		pass := os.Getenv("TODO_PASSWORD")
-		if pass != "" {
+		if authPassword != "" {
 			cookie, err := r.Cookie("token")
-			if err != nil || !verifyToken(cookie.Value, pass) {
+			if err != nil || !verifyToken(cookie.Value, authPassword) {
 				http.Error(w, "Authentication required", http.StatusUnauthorized)
 				return
 			}
@@ -116,23 +115,22 @@ func signinHandler(w http.ResponseWriter, r *http.Request) {
 
 	var req signinRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, err.Error())
+		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	pass := os.Getenv("TODO_PASSWORD")
-	if pass == "" {
-		writeError(w, errors.New("authentication is disabled").Error())
+	if authPassword == "" {
+		writeError(w, http.StatusNotFound, "authentication is disabled")
 		return
 	}
-	if req.Password != pass {
-		writeError(w, "invalid password")
+	if req.Password != authPassword {
+		writeError(w, http.StatusUnauthorized, "invalid password")
 		return
 	}
 
-	token, err := signToken(pass)
+	token, err := signToken(authPassword)
 	if err != nil {
-		writeError(w, err.Error())
+		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]string{"token": token})

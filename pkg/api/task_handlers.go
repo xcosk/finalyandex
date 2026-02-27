@@ -29,17 +29,17 @@ func taskHandler(w http.ResponseWriter, r *http.Request) {
 func getTaskHandler(w http.ResponseWriter, r *http.Request) {
 	id, err := parseID(r.FormValue("id"))
 	if err != nil {
-		writeError(w, err.Error())
+		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	t, err := db.GetTask(strconv.FormatInt(id, 10))
 	if err != nil {
 		if err == sql.ErrNoRows {
-			writeError(w, "task not found")
+			writeError(w, http.StatusNotFound, "task not found")
 			return
 		}
-		writeError(w, err.Error())
+		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -49,39 +49,39 @@ func getTaskHandler(w http.ResponseWriter, r *http.Request) {
 func updateTaskHandler(w http.ResponseWriter, r *http.Request) {
 	var req db.Task
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, "invalid request")
+		writeError(w, http.StatusBadRequest, "invalid request")
 		return
 	}
 
 	_, err := parseID(req.ID)
 	if err != nil {
-		writeError(w, err.Error())
+		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	req.Title = strings.TrimSpace(req.Title)
 	if req.Title == "" {
-		writeError(w, "title is empty")
+		writeError(w, http.StatusBadRequest, "title is empty")
 		return
 	}
 	if err := validateRepeat(req.Repeat); err != nil {
-		writeError(w, err.Error())
+		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	date, err := normalizeTaskDate(time.Now(), req.Date, req.Repeat)
 	if err != nil {
-		writeError(w, err.Error())
+		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 	req.Date = date
 
 	if err := db.UpdateTask(&req); err != nil {
 		if strings.Contains(err.Error(), "incorrect id") {
-			writeError(w, "task not found")
+			writeError(w, http.StatusNotFound, "task not found")
 			return
 		}
-		writeError(w, err.Error())
+		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -91,12 +91,12 @@ func updateTaskHandler(w http.ResponseWriter, r *http.Request) {
 func deleteTaskHandler(w http.ResponseWriter, r *http.Request) {
 	id, err := parseID(r.FormValue("id"))
 	if err != nil {
-		writeError(w, err.Error())
+		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	if err := db.DeleteTask(strconv.FormatInt(id, 10)); err != nil {
-		writeError(w, "task not found")
+		writeError(w, http.StatusNotFound, "task not found")
 		return
 	}
 
@@ -106,7 +106,7 @@ func deleteTaskHandler(w http.ResponseWriter, r *http.Request) {
 func taskDoneHandler(w http.ResponseWriter, r *http.Request) {
 	id, err := parseID(r.FormValue("id"))
 	if err != nil {
-		writeError(w, err.Error())
+		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -114,16 +114,16 @@ func taskDoneHandler(w http.ResponseWriter, r *http.Request) {
 	task, err := db.GetTask(sid)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			writeError(w, "task not found")
+			writeError(w, http.StatusNotFound, "task not found")
 			return
 		}
-		writeError(w, err.Error())
+		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
 	if strings.TrimSpace(task.Repeat) == "" {
 		if err := db.DeleteTask(sid); err != nil {
-			writeError(w, err.Error())
+			writeError(w, http.StatusInternalServerError, err.Error())
 			return
 		}
 		writeJSON(w, http.StatusOK, map[string]any{})
@@ -132,12 +132,12 @@ func taskDoneHandler(w http.ResponseWriter, r *http.Request) {
 
 	next, err := NextDate(time.Now(), task.Date, task.Repeat)
 	if err != nil {
-		writeError(w, err.Error())
+		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	if err := db.UpdateDate(next, sid); err != nil {
-		writeError(w, err.Error())
+		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
